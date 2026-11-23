@@ -3,6 +3,7 @@
 template.yaml (in the template root, not copied):
     placeholders: {name: description, ...}        # used as {{name}} in text files
     optional: {flag: [relative paths], ...}        # removed when the flag is false
+A file named `_gitignore` in the template becomes `.gitignore` in the new book.
 
 vars.yaml:
     vars: {name: value, ...}                       # every placeholder is required
@@ -57,6 +58,12 @@ def run(dest: Path, template: Path, vars_file: Path, *, git: bool = True) -> int
     with tempfile.TemporaryDirectory() as tmp:
         stage = Path(tmp) / "book"
         shutil.copytree(template, stage, ignore=shutil.ignore_patterns("template.yaml", "__pycache__"))
+        # Templates store `_gitignore` so the template repo's own Git doesn't apply the book's ignore rules.
+        for p in list(stage.rglob("_gitignore")):
+            target = p.with_name(".gitignore")
+            if target.exists():
+                target.unlink()
+            p.rename(target)
         for flag, paths in optional.items():
             if not flags.get(flag):
                 for rel in paths or []:
