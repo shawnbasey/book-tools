@@ -102,3 +102,7 @@ Agents with shell access can call `python -m booktools` with no server to run or
 configure. The output is plain text with exit codes, which is easy to test. If a
 shell-less client ever needs these tools, a thin MCP wrapper can import `booktools`
 and expose the same functions.
+
+## License
+
+MIT. See [LICENSE](LICENSE).
