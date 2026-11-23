@@ -11,9 +11,12 @@ vars.yaml:
 """
 from __future__ import annotations
 
+import os
 import re
 import shutil
+import stat
 import subprocess
+import sys
 import tempfile
 from pathlib import Path
 
@@ -23,6 +26,21 @@ from .project import BookToolsError
 
 PLACEHOLDER = re.compile(r"\{\{\s*([a-z0-9_]+)\s*\}\}")
 TEXT_SUFFIXES = {".md", ".yaml", ".yml", ".txt", ".json", ".css", ".csl", ".lua", ".html", ".toml", ""}
+
+
+def _force_writable(func, path, *_):
+    """rmtree/unlink retry: OneDrive and Windows can mark copied files and folders read-only."""
+    os.chmod(path, stat.S_IWRITE | stat.S_IREAD | stat.S_IEXEC)
+    func(path)
+
+
+def _remove(p: Path) -> None:
+    if p.is_dir():
+        shutil.rmtree(p, onexc=_force_writable) if sys.version_info >= (3, 12) else \
+            shutil.rmtree(p, onerror=_force_writable)
+    elif p.exists():
+        os.chmod(p, stat.S_IWRITE | stat.S_IREAD)
+        p.unlink()
 
 
 def _load(path: Path, what: str) -> dict:
@@ -58,6 +76,8 @@ def run(dest: Path, template: Path, vars_file: Path, *, git: bool = True) -> int
     with tempfile.TemporaryDirectory() as tmp:
         stage = Path(tmp) / "book"
         shutil.copytree(template, stage, ignore=shutil.ignore_patterns("template.yaml", "__pycache__"))
+        for p in [stage, *stage.rglob("*")]:  # drop read-only flags inherited from the template
+            os.chmod(p, (stat.S_IWRITE | stat.S_IREAD | stat.S_IEXEC) if p.is_dir() else (stat.S_IWRITE | stat.S_IREAD))
         # Templates store `_gitignore` so the template repo's own Git doesn't apply the book's ignore rules.
         for p in list(stage.rglob("_gitignore")):
             target = p.with_name(".gitignore")
@@ -67,11 +87,7 @@ def run(dest: Path, template: Path, vars_file: Path, *, git: bool = True) -> int
         for flag, paths in optional.items():
             if not flags.get(flag):
                 for rel in paths or []:
-                    p = stage / rel
-                    if p.is_dir():
-                        shutil.rmtree(p)
-                    elif p.exists():
-                        p.unlink()
+                    _remove(stage / rel)
         leftovers = []
         for p in stage.rglob("*"):
             if not p.is_file() or p.suffix.lower() not in TEXT_SUFFIXES:
