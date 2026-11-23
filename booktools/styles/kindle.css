@@ -1,0 +1,82 @@
+/* ==========================================================================
+   reflowable EPUB3 / Kindle stylesheet
+   Relative units only so reader font/size/margin settings keep working.
+   No page geometry, no running heads, no color beyond black and light gray.
+   ========================================================================== */
+
+body {
+  font-family: serif;
+  line-height: 1.45;
+  margin: 0;
+  padding: 0;
+  widows: 2;
+  orphans: 2;
+}
+
+p { margin: 0; text-indent: 1.2em; }
+h1 + p, h2 + p, h3 + p, pre + p, ul + p, ol + p, div + p, table + p, blockquote + p { text-indent: 0; }
+
+h1, h2, h3 {
+  font-family: sans-serif;
+  line-height: 1.2;
+  text-align: left;
+  page-break-after: avoid;
+  break-after: avoid;
+}
+h1 { font-size: 1.6em; margin: 1.5em 0 1em; page-break-before: always; break-before: page; }
+h2 { font-size: 1.25em; margin: 1.6em 0 0.6em; }
+h3 { font-size: 1.08em; margin: 1.2em 0 0.4em; }
+
+a { color: inherit; text-decoration: underline; }
+
+/* Print-only material (the print title page) — pandoc builds the e-book title page. */
+.print-only, section.print-only { display: none; }
+
+/* Front matter */
+.copyright-page p { font-size: 0.85em; text-indent: 0; margin-bottom: 0.6em; }
+.dedication { text-align: center; font-style: italic; margin-top: 3em; }
+
+/* ---------- Prompt blocks & code: wrap, never scroll ---------- */
+pre {
+  font-family: monospace;
+  font-size: 0.85em;
+  line-height: 1.35;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  border: 1px solid #000000;
+  background: #f2f2f2;
+  padding: 0.6em 0.75em;
+  margin: 1em 0;
+  page-break-inside: avoid;
+  break-inside: avoid;
+}
+pre code { font-size: 1em; white-space: pre-wrap; }
+code { font-family: monospace; font-size: 0.9em; }
+pre code span { color: inherit !important; font-style: normal !important; }
+pre.prompt { border-top-width: 3px; }
+div.sourceCode { margin: 1em 0; }
+div.sourceCode pre { margin: 0; }
+
+/* ---------- Callouts ---------- */
+div.callout, div.warning {
+  border-left: 4px solid #000000;
+  padding: 0.5em 0.8em;
+  margin: 1em 0;
+  page-break-inside: avoid;
+}
+div.warning { border: 1px solid #000000; border-left-width: 4px; }
+div.callout p, div.warning p { text-indent: 0; }
+
+/* ---------- Lists, tables, images ---------- */
+ul, ol { margin: 0.6em 0 0.8em; padding-left: 1.4em; }
+li { margin-bottom: 0.3em; }
+table { border-collapse: collapse; width: 100%; font-size: 0.9em; margin: 1em 0; }
+th, td { border: 1px solid #000000; padding: 0.25em 0.4em; text-align: left; vertical-align: top; }
+img { max-width: 100%; height: auto; display: block; margin: 1em auto; }
+blockquote { margin: 1em 1.5em; font-style: italic; }
+
+/* ---------- Navigation ---------- */
+nav#toc ol, nav#landmarks ol { list-style-type: none; padding-left: 0; }
+nav#toc li { margin: 0.4em 0; }

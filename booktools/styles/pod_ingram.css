@@ -1,0 +1,214 @@
+/* ==========================================================================
+   IngramSpark paperback interior
+   No bleed, black & white on white paper. Rendered by WeasyPrint via `booktools pdf`.
+   Page SIZE and MARGINS are injected by booktools from the project's config
+   (production.trim + production.print_targets.<target>.margins_in); values below are fallbacks.
+   STRICT INK RULE: every color is #000000 (text, rules) or #ffffff (paper).
+   No gray fills, no tints: Ingram's B&W press screens grays unpredictably.
+   ========================================================================== */
+
+/* ---------- Page geometry ---------- */
+@page {
+  size: 6in 9in;
+  margin: 0.75in 0.55in 0.8in 0.85in;
+  @top-left     { content: none; }
+  @top-right    { content: none; }
+  @bottom-left  { content: none; }
+  @bottom-right { content: none; }
+}
+
+/* Verso (left): gutter on the right. Running head = book title. */
+@page :left {
+  margin-left: 0.55in;
+  margin-right: 0.85in;
+  @top-left {
+    content: string(book-title);
+    font: italic 8pt/1 "Georgia", "Times New Roman", serif;
+    color: #000000;
+    vertical-align: bottom;
+    padding-bottom: 0.15in;
+  }
+  @bottom-left {
+    content: counter(page);
+    font: 8.5pt/1 "Georgia", "Times New Roman", serif;
+    color: #000000;
+  }
+}
+
+/* Recto (right): gutter on the left. Running head = chapter title. */
+@page :right {
+  margin-left: 0.85in;
+  margin-right: 0.55in;
+  @top-right {
+    content: string(chapter-title);
+    font: italic 8pt/1 "Georgia", "Times New Roman", serif;
+    color: #000000;
+    vertical-align: bottom;
+    padding-bottom: 0.15in;
+  }
+  @bottom-right {
+    content: counter(page);
+    font: 8.5pt/1 "Georgia", "Times New Roman", serif;
+    color: #000000;
+  }
+}
+
+/* Blank versos inserted before right-hand chapter openers: no furniture. */
+@page :blank {
+  @top-left { content: none; }  @top-right { content: none; }
+  @bottom-left { content: none; } @bottom-right { content: none; }
+}
+
+/* Front matter + TOC: no running heads or folios. */
+@page front {
+  @top-left { content: none; }  @top-right { content: none; }
+  @bottom-left { content: none; } @bottom-right { content: none; }
+}
+
+/* Chapter opener pages: folio only, no running head. */
+@page :nth(1 of chapter) { @top-left { content: none; } @top-right { content: none; } }
+
+/* ---------- Base typography ---------- */
+html { color: #000000; background: #ffffff; }
+body {
+  font-family: "Source Serif 4", "Georgia", "Times New Roman", serif;
+  font-size: 10.5pt;
+  line-height: 1.42;
+  text-align: justify;
+  hyphens: auto;
+  orphans: 2;
+  widows: 2;
+  counter-reset: chapter;
+}
+p { margin: 0; text-indent: 1.2em; }
+h1 + p, h2 + p, h3 + p, pre + p, ul + p, ol + p, div + p, table + p, blockquote + p { text-indent: 0; }
+strong { font-weight: 700; }
+a { color: #000000; text-decoration: none; }
+
+h1, h2, h3 {
+  font-family: "Source Sans 3", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  color: #000000;
+  text-align: left;
+  hyphens: manual;
+  break-after: avoid;
+  line-height: 1.2;
+}
+h2 { font-size: 13pt; margin: 1.4em 0 0.5em; }
+h3 { font-size: 11pt; margin: 1.1em 0 0.35em; }
+
+/* ---------- Front matter ---------- */
+.front-matter, nav#TOC { page: front; break-before: right; }
+.title-page { text-align: center; padding-top: 2.2in; }
+.title-page h1 { font-size: 30pt; margin: 0 0 0.25in; string-set: book-title content(); }
+.title-page h2 { font-size: 12pt; font-weight: 400; margin: 0 0 1.6in; }
+.title-page h2.author, .title-page .author h2 { font-size: 13pt; font-weight: 600; }
+.copyright-page { break-before: left; font-size: 8.5pt; padding-top: 4.5in; }
+.copyright-page p { text-indent: 0; text-align: left; margin-bottom: 0.6em; }
+.dedication { text-align: center; padding-top: 2.5in; font-style: italic; }
+.front-matter > h1 { font-size: 18pt; margin: 0.6in 0 0.4in; }
+.title-page > h1 { font-size: 30pt; margin: 0 0 0.25in; }
+
+/* ---------- Table of contents ---------- */
+nav#TOC h1.toc-title { font-size: 18pt; margin: 0.6in 0 0.4in; string-set: none; }
+nav#TOC ul, nav#TOC ol { list-style: none; padding: 0; margin: 0; }
+nav#TOC li { margin: 0 0 0.55em; text-align: left; }
+nav#TOC li ul { display: none; }
+nav#TOC a::after {
+  content: leader('.') target-counter(attr(href), page);
+}
+
+/* ---------- Chapters ---------- */
+section.chapter, section.back-matter { page: chapter; }
+h1.chapter, .chapter > h1, h1.back-matter, .back-matter > h1 {
+  break-before: right;
+  font-size: 22pt;
+  margin: 1.1in 0 0.55in;
+  string-set: chapter-title content();
+}
+section.chapter > h1.chapter { break-before: auto; }   /* section already broke */
+section.chapter, section.back-matter { break-before: right; }
+h1.chapter, .chapter > h1 { counter-increment: chapter; }
+h1.chapter::before, .chapter > h1::before {
+  content: "Chapter " counter(chapter);
+  display: block;
+  font-size: 10pt;
+  font-weight: 400;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  margin-bottom: 0.3em;
+}
+
+/* ---------- Lists, tables, quotes ---------- */
+ul, ol { margin: 0.5em 0 0.7em; padding-left: 1.3em; text-align: left; }
+li { margin-bottom: 0.25em; }
+table { width: 100%; border-collapse: collapse; font-size: 9pt; margin: 0.8em 0; break-inside: avoid; }
+th, td { border: 0.5pt solid #000000; padding: 3pt 5pt; text-align: left; vertical-align: top; }
+th { background: #ffffff; font-weight: 700; border-bottom-width: 1.25pt; }
+blockquote { margin: 0.8em 1.2em; font-style: italic; }
+img { max-width: 100%; display: block; margin: 0.8em auto; break-inside: avoid; }
+
+/* ---------- Prompt blocks & code (monospace callouts) ---------- */
+pre {
+  font-family: "Consolas", "Cascadia Mono", "DejaVu Sans Mono", monospace;
+  font-size: 8.4pt;
+  line-height: 1.35;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  text-align: left;
+  color: #000000;
+  background: #ffffff;
+  border: 0.75pt solid #000000;
+  border-radius: 2pt;
+  padding: 7pt 9pt;
+  margin: 0.8em 0;
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+pre.prompt { break-inside: avoid; }
+pre.prompt { border-width: 1.25pt 0.75pt 0.75pt 0.75pt; }
+pre.prompt::before {
+  content: "PROMPT \2014  COPY / PASTE";
+  display: block;
+  font-family: "Source Sans 3", "Segoe UI", Arial, sans-serif;
+  font-size: 7pt;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  margin-bottom: 5pt;
+}
+div.sourceCode { break-inside: avoid; margin: 0.8em 0; }
+div.sourceCode pre { margin: 0; }
+code { font-family: "Consolas", "Cascadia Mono", "DejaVu Sans Mono", monospace; font-size: 0.86em; }
+pre code { font-size: 1em; }
+pre code span { color: #000000 !important; font-style: normal !important; }
+
+/* ---------- Callouts (::: callout / ::: warning) ---------- */
+div.callout, div.warning {
+  border-left: 3pt solid #000000;
+  background: #ffffff;
+  padding: 6pt 9pt;
+  margin: 0.9em 0;
+  font-size: 9.5pt;
+  break-inside: avoid;
+}
+div.callout p, div.warning p { text-indent: 0; text-align: left; }
+div.warning { background: #ffffff; border: 1pt solid #000000; border-left-width: 3pt; }
+div.callout::before, div.warning::before {
+  display: block;
+  font-family: "Source Sans 3", "Segoe UI", Arial, sans-serif;
+  font-size: 7.5pt;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  margin-bottom: 3pt;
+}
+div.callout::before { content: "TIP"; }
+div.warning::before { content: "WARNING"; }
+
+/* Print-only elements are shown here; hidden in kindle.css. */
+.print-only { display: block; }
+
+/* ---------- Ingram strict-black enforcement ---------- */
+*, *::before, *::after { color: #000000 !important; border-color: #000000 !important; }
+pre, div.callout, div.warning, th, td, div.sourceCode { background: #ffffff !important; }
+pre { border-width: 1pt; }
+div.callout { border: 1pt solid #000000; border-left-width: 3pt; }
+/* Images: supply diagrams already converted to pure grayscale/1-bit; CSS cannot convert them. */
