@@ -13,6 +13,7 @@ import uuid
 from pathlib import Path
 
 from . import deps
+from .citeproc import citeproc_args
 from .pdf import STYLES_DIR
 from .project import BookToolsError, Project, combine, stats_table
 from .snapshot import git_snapshot
@@ -73,7 +74,7 @@ def build(project: Project, *, cover: Path | None = None, epubcheck: bool = True
         cmd = [exe, str(md), "-f", "markdown+smart", "-t", "epub3", "-o", str(out),
                "--metadata-file", str(meta), "--css", str(css), "--toc", "--toc-depth=2",
                "--resource-path", f"{project.manuscript_dir}{os.pathsep}{project.root}",
-               *split, *deps.no_highlight_args(version)]
+               *split, *deps.no_highlight_args(version), *citeproc_args(project)]
         if cover:
             cmd += ["--epub-cover-image", str(cover)]
         print(f"Building EPUB3 from {len(chapters)} files (pandoc {'.'.join(map(str, version))}, css {css.name})...")

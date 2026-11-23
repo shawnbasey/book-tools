@@ -11,6 +11,7 @@ import tempfile
 from pathlib import Path
 
 from . import deps, specs
+from .citeproc import FOOTNOTE_FILTER, citeproc_args
 from .project import BookToolsError, Project, combine, stats_table
 from .snapshot import git_snapshot
 
@@ -68,7 +69,8 @@ def _render_html(project: Project, version: tuple[int, ...], exe: str, workdir: 
     body = [c for c in chapters if c.number != 0]
     template = workdir / "print-template.html"
     template.write_text(HTML_TEMPLATE, encoding="utf-8")
-    common = ["-f", "markdown+smart", "-t", "html5", "--section-divs",
+    # --wrap=none: WeasyPrint turns source newlines inside page footnotes into hard line breaks.
+    common = ["-f", "markdown+smart", "-t", "html5", "--section-divs", "--wrap=none",
               "--resource-path", f"{project.manuscript_dir}{os.pathsep}{project.root}",
               *deps.no_highlight_args(version)]
 
@@ -84,8 +86,11 @@ def _render_html(project: Project, version: tuple[int, ...], exe: str, workdir: 
 
     front_html = run(combine(front), "front.md", []).stdout if front else ""
     lang = str(project.book.get("language") or "en")
+    # citeproc first (it creates the Chicago notes), then the filter that makes notes page footnotes.
+    cite = citeproc_args(project)
     main = run(combine(body), "body.md",
-               ["--standalone", f"--template={template}", "--toc", "--toc-depth=1",
+               [*cite, "--lua-filter", str(FOOTNOTE_FILTER),
+                "--standalone", f"--template={template}", "--toc", "--toc-depth=1",
                 "--metadata", f"pagetitle={project.book.get('title') or project.slug}",
                 "--metadata", f"lang={lang}"]).stdout
     return main.replace("<body>", "<body>\n" + front_html, 1)

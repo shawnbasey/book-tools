@@ -56,4 +56,11 @@ production:
       specs_source: null
       specs_verified: null
 
+research:                             # booktools research ... (local OpenAI-compatible server)
+  endpoint: null                      # e.g. http://localhost:1234/v1 (LM Studio)
+  models: {embed: null, extractor: null, judge: null}   # role names from MODELS.md, or model ids
+  notes_dir: context/raw-material
+  citation_style: chicago-notes-bibliography
+  judge_min_score: 2
+
 chapters: []                          # managed by the drafting workflow

@@ -80,3 +80,7 @@ blockquote { margin: 1em 1.5em; font-style: italic; }
 /* ---------- Navigation ---------- */
 nav#toc ol, nav#landmarks ol { list-style-type: none; padding-left: 0; }
 nav#toc li { margin: 0.4em 0; }
+
+/* ---------- Notes and bibliography ---------- */
+section.footnotes, aside.footnote, .footnotes { font-size: 0.85em; }
+#refs .csl-entry { padding-left: 1.5em; text-indent: -1.5em; margin-bottom: 0.5em; }

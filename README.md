@@ -2,7 +2,9 @@
 
 **Turn a folder of Markdown chapters into print-ready paperback PDFs (Amazon KDP,
 IngramSpark), a reflowable EPUB3, and exact full-wrap cover templates, from one
-command-line tool driven by a per-book config file.**
+command-line tool driven by a per-book config file. Each book also gets a local
+research library (GraphRAG): local models embed your sources, a judge checks every
+passage, and citations become Chicago footnotes plus a bibliography.**
 
 booktools is built for agent-run book projects: an AI "chief editor" (or a person)
 calls it from the shell whenever a workflow needs word counts, a build, or cover math.
@@ -20,6 +22,18 @@ missing, the tool stops and tells the agent exactly what to look up, rather than
 | **POD PDF (strict black)** | `python -m booktools pdf --target ingram` | Same build using the IngramSpark stylesheet: every color is pure `#000000` or `#ffffff` for B&W presses. `--pdf-variant pdf/x-1a` is passed through to WeasyPrint. |
 | **EPUB** | `python -m booktools epub` | Builds a reflowable EPUB3 for Kindle, Apple Books, and Kobo: one file per chapter, an auto-generated TOC, wrapping prompt/code blocks, an optional cover image, and print-only pages removed. Runs epubcheck if it is installed. |
 | **Spine & cover** | `python -m booktools spine` | Reads the page count from the built PDF and calculates spine width and full-wrap cover size (bleed + back + spine + front + bleed) for each printer, in inches, mm, and pixels at 300 dpi. Says whether spine text is allowed. Writes an SVG wrap template per printer with bleed, trim, folds, safe zones, and the barcode area marked. `--pages N` gives early estimates. |
+
+| **New book** | `python -m booktools new DEST --template DIR --vars vars.yaml` | Creates a book folder from a starter template. It fills every `{{placeholder}}` and removes the optional parts you switched off. It refuses an incomplete vars file or any leftover placeholder, and leaves no half-made folder behind. Then it runs `git init` with an initial commit and a tag. |
+
+### Research library (per book, all local)
+
+| Tool | Command | What it does |
+|---|---|---|
+| **Ingest** | `python -m booktools research ingest` | Reads everything new in `research/inbox/`: PDF (page by page), HTML, DOCX, MD and TXT. Also fetches each new URL in `research/urls.txt` and saves a local copy. Chunks the text, keeping page numbers, and embeds it through a local OpenAI-compatible server such as LM Studio. A local model drafts citation metadata into `research/sources.yaml` (`verified: false` until you check it) and extracts an entity/relation graph. `--notes` ingests your raw notes as uncitable material for clustering. |
+| **Query** | `python -m booktools research query "question"` | The retrieval agent: vector search plus a one-hop expansion through the entity graph. A local judge scores each candidate 0–3 and must quote it word for word, and the code then checks that the quote really is in the source. Only verified, relevant passages come back, each with a ready citation such as `[@delgado2021coral, p. 3]`; they are logged as approved. `--json` gives agent-readable output. |
+| **Themes** | `python -m booktools research themes --chapters 8..12` | Brain Dump → Cluster → Outline. Agglomerative clustering (cosine distance) groups your notes into chapter themes and suggested sections, picking the best count in your range. HDBSCAN flags ideas that fit nowhere. A local model names each theme. Writes `context/themes.md`, with an **Unplaced ideas** list for you to decide on. |
+| **Bibliography** | `python -m booktools research bibliography` | Checks every `[@key, p. N]` in the manuscript. The key must exist, its source should be verified, and the page must match a judge-approved passage. Writes CSL-JSON. After that, `pdf` and `epub` add citeproc automatically: **Chicago notes-bibliography** footnotes at the foot of the printed page, endnotes in the EPUB, and a generated Bibliography. `--strict` fails on any unverified or unapproved citation. |
+| **Status / Graph** | `python -m booktools research status` · `research graph --export g.graphml` | Shows library counts, models, and sources still unverified. Exports the entity graph for Gephi or yEd. |
 
 Exit codes: `0` ok · `1` tool or build error · `2` missing input or specs (read the message) · `3` over the page ceiling.
 
@@ -82,6 +96,31 @@ After filling them in, record `specs_source` and `specs_verified: YYYY-MM-DD` fo
 printer. Builds print a `VERIFY:` warning until that date is set, or once it is more than
 180 days old.
 
+## Research configuration
+
+Add a `research:` block to the book's `context/book-index.yaml`:
+
+```yaml
+research:
+  endpoint: http://localhost:1234/v1      # LM Studio or any OpenAI-compatible local server
+  models: {embed: embed.book, extractor: local.extractor, judge: local.judge}
+  notes_dir: context/raw-material         # raw notes for `ingest --notes` and `themes`
+  citation_style: chicago-notes-bibliography
+  judge_min_score: 2                      # 0-3; lower scores are never citable
+  chunk_words: 300                        # optional
+  gpu_lock: ../tools/gpu_lock.py          # optional single-GPU lock adapter
+```
+
+- **Models** are role names looked up in the nearest `MODELS.md` above the book folder
+  (`| \`role\` | vendor | use | \`model-id\` | ...`), or plain model ids. The embedding model is
+  fixed per library. To change it, delete `research/library.sqlite` and ingest again.
+- **The library** is one SQLite file per book holding sources, chunks with vectors, entities and
+  relations. It needs no server and moves with the book.
+- **Rules for writers** (the citation discipline the agents follow) are up to each project; the
+  companion scaffold `nonfiction-writing-suite` ships a `citations.md` rule.
+- **`gpu_lock`** (optional) points to a Python module with `holders()`, `is_small()` and `Claim`.
+  booktools refuses to load a large model while another one holds the GPU.
+
 ## Styles
 
 Default stylesheets ship in `booktools/styles/`: `pod_kdp.css`, `pod_ingram.css`, and
@@ -106,3 +145,7 @@ and expose the same functions.
 ## License
 
 MIT. See [LICENSE](LICENSE).
+
+`booktools/styles/csl/chicago-notes-bibliography.csl` comes from the
+[Citation Style Language styles repository](https://github.com/citation-style-language/styles)
+and is licensed under [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/).

@@ -95,8 +95,10 @@ def pdf_page_count(pdf: Path) -> int:
         raise BookToolsError("Need pypdf or PyMuPDF to count PDF pages.\n  python -m pip install pypdf") from None
 
 
-def doctor() -> int:
-    """Print the status of every dependency. Returns 0 if all required ones work."""
+def doctor(project=None) -> int:
+    """Print the status of every dependency. Returns 0 if all required ones work.
+
+    Inside a book with a `research:` block, also checks the local AI server and configured models."""
     ok = True
     rows: list[tuple[str, str, str]] = []
 
@@ -132,7 +134,33 @@ def doctor() -> int:
     epc = shutil.which("epubcheck")
     rows.append(("epubcheck", "OK" if epc else "optional", epc or "not installed (EPUB validation skipped)"))
 
+    for mod, label, hint in (("numpy", "numpy", ""), ("networkx", "networkx", ""), ("sklearn", "scikit-learn", ""),
+                             ("trafilatura", "trafilatura", ""), ("docx", "python-docx", "optional (DOCX sources)")):
+        try:
+            m = __import__(mod)
+            rows.append((label, "OK", getattr(m, "__version__", "")))
+        except ImportError:
+            required = not hint
+            ok &= not required
+            rows.append((label, "MISSING" if required else "optional", hint or f"python -m pip install {label}"))
+
+    if project is not None and project.config.get("research"):
+        from .research import config as rconfig
+        from .research.llm import LocalAI
+        try:
+            cfg = rconfig.load(project, "doctor")
+            have = LocalAI(cfg.endpoint).available()
+            rows.append(("local AI", "OK", f"{cfg.endpoint} ({len(have)} models)"))
+            for role, model in cfg.models.items():
+                found = model in have
+                ok &= found
+                rows.append((f"  {role}", "OK" if found else "MISSING",
+                             f"{model}" + ("" if found else "  (not in the server's model list; `lms ls`)")))
+        except BookToolsError as exc:
+            ok = False
+            rows.append(("local AI", "ERROR", str(exc).splitlines()[0]))
+
     for name, status, detail in rows:
-        print(f"{name:<12}{status:<9}{detail}")
+        print(f"{name:<14}{status:<9}{detail}")
     print("\nAll required tools ready." if ok else "\nSome required tools are missing (see above).")
     return 0 if ok else 1

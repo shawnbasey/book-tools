@@ -3,4 +3,4 @@
 Run as `python -m booktools --help`. All book-specific values live in each project's
 context/book-index.yaml; see templates/book-index.template.yaml.
 """
-__version__ = "0.2.0"
+__version__ = "0.3.0"

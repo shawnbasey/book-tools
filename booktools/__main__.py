@@ -5,6 +5,8 @@
     python -m booktools [--project PATH] pdf --target kdp|ingram|<any configured target>
     python -m booktools [--project PATH] epub
     python -m booktools [--project PATH] spine [--pages N | --pdf FILE] [--target T ...]
+    python -m booktools new DEST --template DIR --vars vars.yaml
+    python -m booktools [--project PATH] research ingest|query|themes|status|graph|bibliography
 
 Exit codes: 0 ok, 1 tool/build error, 2 missing input or specs (read the message), 3 over page ceiling.
 """
@@ -12,6 +14,7 @@ from __future__ import annotations
 
 import argparse
 import sys
+import warnings
 from pathlib import Path
 
 from . import __version__, deps
@@ -45,14 +48,72 @@ def main(argv: list[str] | None = None) -> int:
     s.add_argument("--target", action="append", help="limit to these targets (repeatable)")
     s.add_argument("--no-svg", action="store_true")
 
+    n = sub.add_parser("new", help="create a book folder from a starter template")
+    n.add_argument("dest", type=Path)
+    n.add_argument("--template", type=Path, required=True, help="template folder containing template.yaml")
+    n.add_argument("--vars", type=Path, required=True, help="vars.yaml with vars: and optional:")
+    n.add_argument("--no-git", action="store_true")
+
+    r = sub.add_parser("research", help="per-book local research library (GraphRAG)")
+    rs = r.add_subparsers(dest="rcmd", required=True)
+    ri = rs.add_parser("ingest", help="ingest research/inbox/ + research/urls.txt (or --notes)")
+    ri.add_argument("--notes", action="store_true", help="ingest context/raw-material/ as notes for `themes`")
+    ri.add_argument("--no-graph", action="store_true", help="skip entity-graph extraction (run `research graph` later)")
+    ri.add_argument("--no-llm", action="store_true", help="embeddings only: no metadata drafting, no graph")
+    rq = rs.add_parser("query", help="retrieve judge-verified, citable passages")
+    rq.add_argument("question")
+    rq.add_argument("-k", type=int, help="vector candidates (default research.k)")
+    rq.add_argument("--chapter", help="chapter number, recorded in the citation log")
+    rq.add_argument("--json", action="store_true")
+    rq.add_argument("--no-judge", action="store_true", help="raw retrieval for debugging (results are not citable)")
+    rt = rs.add_parser("themes", help="cluster notes into chapter themes -> context/themes.md")
+    rt.add_argument("--chapters", default="8..12", help="range of chapter counts to try, e.g. 8..12")
+    rt.add_argument("--no-llm", action="store_true", help="skip naming themes with the local model")
+    rs.add_parser("status", help="library counts, models, unverified sources")
+    rg = rs.add_parser("graph", help="extract graph for un-graphed chunks; optionally export GraphML")
+    rg.add_argument("--export", type=Path, help="write the entity graph as GraphML")
+    rb = rs.add_parser("bibliography", help="audit [@key] citations, write research/references.json")
+    rb.add_argument("--strict", action="store_true", help="fail on unverified sources or unapproved citations")
+    rb.add_argument("--all", action="store_true", help="include every verified source, not only cited ones")
+
     args = ap.parse_args(argv)
+    warnings.filterwarnings("ignore", message=".*SOCKS support.*")  # urllib3 noise via trafilatura
     for stream in (sys.stdout, sys.stderr):  # Windows consoles default to cp1252
         if hasattr(stream, "reconfigure"):
             stream.reconfigure(encoding="utf-8", errors="replace")
     try:
         if args.cmd == "doctor":
-            return deps.doctor()
+            try:
+                here = find_project(args.project)
+            except BookToolsError:
+                here = None
+            return deps.doctor(here)
+        if args.cmd == "new":
+            from . import new
+            return new.run(args.dest, args.template, args.vars, git=not args.no_git)
         project = find_project(args.project)
+        if args.cmd == "research":
+            from .research import config as rconfig
+            cfg = rconfig.load(project, f"research {args.rcmd}")
+            if args.rcmd == "ingest":
+                from .research import ingest
+                return ingest.run(cfg, notes=args.notes, graph=not args.no_graph, llm=not args.no_llm)
+            if args.rcmd == "query":
+                from .research import retrieve
+                return retrieve.run(cfg, args.question, k=args.k, chapter=args.chapter, as_json=args.json,
+                                    judge=not args.no_judge)
+            if args.rcmd == "themes":
+                from .research import themes
+                return themes.run(cfg, args.chapters, llm=not args.no_llm)
+            if args.rcmd == "status":
+                from .research import status
+                return status.status(cfg)
+            if args.rcmd == "graph":
+                from .research import status
+                return status.graph(cfg, args.export)
+            if args.rcmd == "bibliography":
+                from .research import biblio
+                return biblio.run(cfg, strict=args.strict, include_all=args.all)
         if args.cmd == "stats":
             table, _ = stats_table(project, project.chapters())
             print(f"Project: {project.root}\n\n{table}")

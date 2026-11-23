@@ -212,3 +212,20 @@ pre, div.callout, div.warning, th, td, div.sourceCode { background: #ffffff !imp
 pre { border-width: 1pt; }
 div.callout { border: 1pt solid #000000; border-left-width: 3pt; }
 /* Images: supply diagrams already converted to pure grayscale/1-bit; CSS cannot convert them. */
+
+/* ---------- Footnotes (Chicago notes via booktools footnotes.lua) ---------- */
+@page { @footnote { border-top: 0.5pt solid #000000; padding-top: 4pt; margin-top: 8pt; } }
+.footnote {
+  float: footnote;
+  font-size: 7.8pt;
+  line-height: 1.3;
+  text-align: left;
+  text-indent: 0;
+}
+::footnote-call { content: counter(footnote); font-size: 6.5pt; vertical-align: super; line-height: 0; }
+::footnote-marker { content: counter(footnote) ". "; }
+h1.chapter, .chapter > h1 { counter-reset: footnote; }
+
+/* ---------- Bibliography (pandoc citeproc #refs) ---------- */
+#refs { font-size: 9pt; text-align: left; }
+#refs .csl-entry { padding-left: 1.5em; text-indent: -1.5em; margin-bottom: 0.45em; }
